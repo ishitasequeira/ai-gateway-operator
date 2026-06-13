@@ -102,22 +102,22 @@ func (m *Module) initialize(_ context.Context, rr *odhtypes.ReconciliationReques
 	return nil
 }
 
-// checkAllSubModuleStates reports whether at least one AIGateway sub-module is set to Managed.
-func checkAllSubModuleStates(obj *componentApi.AIGateway) bool {
+// anySubModuleManaged reports whether at least one AIGateway sub-module is set to Managed.
+func anySubModuleManaged(obj *componentApi.AIGateway) bool {
 	return obj.Spec.BatchGateway.ManagementState == managedState
 	// TODO: add maas once it lands, e.g.:
 	//   || obj.Spec.MaaS.ManagementState == managedState
 }
 
 // force to set the DeploymentsAvailable condition to Info level from Error
-// this makes operator not flag AIGategeway CR status to False, thus opendatahub-operator wont set ModuleStatus to False
+// this makes operator not flag AIGateway CR status to False, thus opendatahub-operator wont set ModuleStatus to False
 func (m *Module) overWriteCondition(_ context.Context, rr *odhtypes.ReconciliationRequest) error {
 	obj, ok := rr.Instance.(*componentApi.AIGateway)
 	if !ok {
 		return fmt.Errorf("instance is not an AIGateway")
 	}
 
-	if checkAllSubModuleStates(obj) {
+	if anySubModuleManaged(obj) {
 		return nil
 	}
 
