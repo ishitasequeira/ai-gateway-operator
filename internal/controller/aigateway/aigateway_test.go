@@ -91,6 +91,22 @@ func TestNewModule(t *testing.T) {
 	g.Expect(m.maasManifestInfo.SourcePath).To(Equal("base"))
 }
 
+func TestNewModuleXKS(t *testing.T) {
+	g := NewWithT(t)
+
+	cfg := &moduleconfig.Config{
+		PlatformType:    "XKS",
+		PlatformVersion: "1.0.0",
+		ManifestsPath:   "/manifests",
+	}
+
+	m, err := NewModule(cfg)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(m.maasManifestInfo.ContextDir).To(Equal("maascontroller"))
+	g.Expect(m.maasManifestInfo.SourcePath).To(Equal("overlays/xks"))
+	g.Expect(m.batchGatewayManifestInfo.SourcePath).To(Equal("base"))
+}
+
 func TestNewModuleInvalidVersion(t *testing.T) {
 	g := NewWithT(t)
 
