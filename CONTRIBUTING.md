@@ -58,9 +58,9 @@ this repo enforces and how to work with it.
 |---|---|---|
 | `ci.yml` / `lint` | push + PR | `make lint` |
 | `ci.yml` / `test` | push + PR | `make test`, then provisions Kind + `make get-manifests` + `make test-integration` |
-| `ci.yml` / `e2e` | push + PR (after `test`) | Provisions Kind, `make get-manifests`, `make test-e2e` |
-| `ci-image.yml` | push + PR | Container image build |
-| `tls-lint.yml`, `semgrep-tls.yml` | push + PR | TLS-configuration static analysis |
+| `ci.yml` / `e2e` | push + PR (after `test`) | Provisions Kind, builds/pushes image (`container-build` includes `get-manifests` via `container-prep`), `make test-e2e` |
+| `ci-image.yml` | push to `main` and `v*` tags | Container image build |
+| `tls-lint.yml`, `semgrep-tls.yml` | PR to `main`, `master`, `dev`, `odh`, `incubating`, `stable`, or `stable-2.x` | TLS-configuration static analysis |
 
 **Run locally before pushing:** `make lint`, `make test`, and — if you touched
 reconciliation logic or manifests — `make test-integration` / `make test-e2e`
@@ -83,8 +83,8 @@ AI Gateway now spans three repos: this one (AIGO), [ai-gateway-controller](https
 | Repo | Owns | What it tests | Test suite |
 |------|------|----------------|------------|
 | **AIGO** (this repo) | Component setup & dependency management — deploy/status only | `AIGateway` CR reconciles to `Ready`; sibling controller Deployments (`maas-controller`, `ai-gateway-controller`, `batch-gateway-operator`) become `Available`; aggregate status (`ModelsAsAServiceReady`, etc.) rolls up correctly. **Never the request path.** | `test/e2e/*_test.go` — see `maasPrerequisites`/`maasCleanup` in `test/e2e/models_as_service_test.go` for the pattern: install prereqs, create the CR, assert on status. No HTTP calls to a gateway, no route assertions. |
-| **AIGC** | Deploying the Praxis-backed stack + AIGC's own control-plane logic | Its own reconciliation logic (`pkg/tenant`, `pkg/render`, `pkg/controller` for ExternalModel/ExternalProvider) via real fixtures. For MaaS-level/request-path behavior (subscription enforcement, auth, route matching, identity headers), AIGC does **not** write new test content of its own — it fetches and re-runs **MaaS's own pytest suite** against its Praxis-backed deployment, pinned via `test/maas-e2e.lock`. | `test/kind-env`, `test/openshift-env` + a vendored, pinned copy of MaaS's `test/e2e/tests/` |
-| **MaaS** | The single source of truth for MaaS-level resource/request behavior | Subscription enforcement, auth policy, rate limiting, API-key lifecycle, and anything visible at the MaaS API/Gateway boundary — including OpenAI resource-API routing and identity-header propagation. Written once, run twice: in MaaS against IPP, and via AIGC's vendored fetch against Praxis. | MaaS's `test/e2e/tests/*.py` (pytest) |
+| **AIGC** | Deploying the Praxis-backed stack + AIGC's own control-plane logic | Its own reconciliation logic (`pkg/tenant`, `pkg/render`, `pkg/controller` for ExternalModel/ExternalProvider) via real fixtures. For MaaS-level/request-path behavior (subscription enforcement, auth, route matching, identity headers), AIGC does **not** write new test content of its own — it fetches and re-runs **MaaS's own pytest suite** against its Praxis-backed deployment, pinned via `test/maas-e2e.lock`. | `test/kind-env`, `test/openshift-env` + runtime checkout of MaaS's `test/e2e/tests/` in `test/maas-e2e/` (pinned via `test/maas-e2e.lock`) |
+| **MaaS** | The single source of truth for MaaS-level resource/request behavior | Subscription enforcement, auth policy, rate limiting, API-key lifecycle, and anything visible at the MaaS API/Gateway boundary — including OpenAI resource-API routing and identity-header propagation. Written once, run twice: in MaaS against IPP, and via AIGC's runtime checkout in `test/maas-e2e/` against Praxis. | MaaS's `test/e2e/tests/*.py` (pytest) |
 
 **Do not add request-path assertions (route matching, header forwarding, plugin behavior, tenant-isolation-at-the-routing-layer) to this repo's e2e suite.** If a PR against this repo needs that kind of coverage, it almost always belongs in AIGC (if it's about Praxis wiring or AIGC's own reconciliation) or in MaaS (if it's about MaaS resource/request semantics — subscriptions, auth, rate limits). This repo's e2e should only ever need to answer "did the component get installed and report `Ready`?"
 
