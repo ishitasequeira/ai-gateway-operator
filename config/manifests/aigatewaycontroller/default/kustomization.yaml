@@ -4,8 +4,10 @@ kind: Kustomization
 namespace: opendatahub
 
 resources:
+  - ../crd
   - ../rbac
   - ../manager
+  - ../monitoring
 
 labels:
   - pairs:
